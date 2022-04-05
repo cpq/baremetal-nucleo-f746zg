@@ -5,7 +5,7 @@ MEMORY {
 }
 _estack     = ORIGIN(ram) + LENGTH(ram);    /* boot.s and init_heap() */
 SECTIONS {
-  .vectortab  : { KEEP(*(.vectortab)) } > rom
+  .vectors  : { KEEP(*(.vectors)) } > rom
   .text       : { *(.text*) } > rom
   .rodata     : { *(.rodata*) } > rom
 

@@ -3,7 +3,7 @@ ARCH    = arm-none-eabi
 OPTS		= -W -Wall -g3 -Os
 MCUFL   = -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
 CFLAGS  = $(OPTS) $(MCUFL) $(INCS) $(DEFS)
-LDFLAGS = -Tlink.ld -nostartfiles -nostdlib --specs nosys.specs -lc -Wl,--gc-sections -Wl,-Map=$@.map
+LDFLAGS = -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
 
 SOURCES = boot.s main.c #syscalls.c
 
@@ -14,7 +14,7 @@ $(TARGET).elf: $(SOURCES)
 	$(ARCH)-gcc $(SOURCES) $(CFLAGS) $(LDFLAGS) -o $@
 
 flash: $(TARGET).bin
-	st-flash --reset write $< 0x8000000
+	st-flash --reset write $(TARGET).bin 0x8000000
 
 openocd:
 	openocd -f openocd.cfg
@@ -32,6 +32,8 @@ gdb: $(TARGET).elf
   -ex 'r' \
   $(TARGET).elf
 
+mon:
+	esputil -p /dev/ttyACM0 monitor
 
 clean:
 	@rm -rf $(TARGET).*

@@ -1,11 +1,17 @@
-TARGET  = firmware
-ARCH    = arm-none-eabi
-OPTS		= -W -Wall -g3 -Os
-MCUFL   = -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
-CFLAGS  = $(OPTS) $(MCUFL) $(INCS) $(DEFS)
-LDFLAGS = -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
+TARGET  	= firmware
+ARCH    	= arm-none-eabi
+OPTS			?= -g3 -Os
+WARN 			?= -W -Wall -Wextra -Werror -Wundef -Wshadow -Wdouble-promotion -Wformat-truncation -fno-common -Wconversion
+DEFS			?= -I. -Imongoose -Imip -DMG_ENABLE_LOG=0 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ARCH=MG_ARCH_CUSTOM
+MCUFL   	?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
+CFLAGS  	?= $(WARN) $(OPTS) $(MCUFL) $(DEFS) $(DEFS)
+LDFLAGS 	?= -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
 
-SOURCES = boot.s main.c #syscalls.c
+SOURCES 	= boot.s main.c syscalls.c #mongoose/mongoose.c mongoose_custom.c
+
+mongoose/mongoose.c:
+	git clone --depth 1 https://github.com/cesanta/mongoose
+	git clone --depth 1 https://github.com/cesanta/mip
 
 $(TARGET).bin: $(TARGET).elf
 	$(ARCH)-objcopy -O binary $< $@

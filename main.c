@@ -7,35 +7,44 @@
 #define LED2 PIN('B', 7)   // On-board LED pin
 #define LED3 PIN('B', 14)  // On-board LED pin
 
+static uint32_t s_ticks;
+static uint32_t s_ic;
+
 int main(void) {
   init_ram();
   // init_clock();
-  RCC->AHB1ENR |= BIT(0) | BIT(1) | BIT(2) | BIT(3);  // GPIO{A,B,C,D}
-  RCC->APB1ENR |= BIT(18) | BIT(17);                  // USART{3,2}
-  RCC->APB2ENR |= BIT(4);                             // USART1
+  RCC->AHB1ENR |= BIT(0) | BIT(1) | BIT(2) | BIT(3);      // GPIO{A,B,C,D}
+  RCC->APB1ENR |= BIT(18) | BIT(17);                      // USART{3,2}
+  RCC->APB2ENR |= BIT(4);                                 // USART1
+  RCC->AHB1ENR |= BIT(25) | BIT(26) | BIT(27) | BIT(28);  // Ethernet
+
+  SysTick_Config(FREQ / 1000);  // Increment s_ticks every millisecond
+  NVIC_Enable_IRQ(61);          // Ethernet
 
   gpio_output(LED1);
-  gpio_output(LED2);
-  gpio_output(LED3);
   gpio_on(LED1);
-  gpio_on(LED2);
-  gpio_on(LED3);
 
   struct uart *uart = UART3;
   uart_init(uart, 115200);
 
   for (;;) {
+    char buf[20];
+    int len = snprintf(buf, sizeof(buf), "%lu %02lu:%02lu:%02lu.%lu", s_ic,
+                       s_ticks / 3600000, (s_ticks / 1000 / 60) % 60,
+                       (s_ticks / 1000) % 60, s_ticks % 1000);
+    uart_write_buf(uart, buf, (size_t) len);
+    uart_write_byte(uart, '\n');
     gpio_toggle(LED1);
-    uart_write_byte(uart, 'a');             // And write it back
-    if (uart_read_ready(uart)) {            // Is UART readable?
-      uint8_t byte = uart_read_byte(uart);  // Read one byte
-      uart_write_byte(uart, byte);          // And write it back
-    }
-    spin(199999);
+    spin(999999);
   }
 
   return 0;
 }
 
-__attribute__((naked)) void ETH_IRQHandler(void) {
+void irq_systick(void) {
+  s_ticks++;
+}
+
+void irq_eth(void) {
+  s_ic++;
 }

@@ -3,13 +3,18 @@
 // https://www.st.com/resource/en/reference_manual/dm00124865-stm32f75xxx-and-stm32f74xxx-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf
 // Memory map: 2.2.2
 
+#pragma once
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #define BIT(x) (1UL << (x))
+#define REG(x) ((volatile uint32_t *) (x))
 #define PIN(bank, num) ((((bank) - 'A') << 8) | (num))
 #define FREQ 16000000
+#define ICTR 0xe000e004
+#define ICSR 0xe000ed04
 
 static inline void init_ram(void) {
   extern uint32_t _sbss, _ebss;
@@ -31,11 +36,15 @@ struct nvic {
   volatile uint32_t ISER[8], RESERVED0[24], ICER[8], RSERVED1[24], ISPR[8],
       RESERVED2[24], ICPR[8], RESERVED3[24], IABR[8], RESERVED4[56], IP[240],
       RESERVED5[644], STIR;
-} NVIC_Type;
+};
 #define NVIC ((struct nvic *) 0xe000e100)
 
-static inline void Set_NVIC_Prio(int irq, uint32_t prio) {
+static inline void NVIC_Set_Prio(int irq, uint32_t prio) {
   NVIC->IP[irq] = prio << 4;
+}
+
+static inline void NVIC_Enable_IRQ(uint32_t n) {
+  NVIC->ISER[n >> 5UL] = (uint32_t) (1UL << (n & 0x1fUL));
 }
 
 static inline uint32_t SysTick_Config(uint32_t ticks) {

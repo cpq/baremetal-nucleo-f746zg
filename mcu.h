@@ -30,7 +30,7 @@ static inline void spin(volatile uint32_t count) {
 struct systick {
   volatile uint32_t CTRL, LOAD, VAL, CALIB;
 };
-#define SysTick ((struct systick *) 0xe000e010)
+#define SYSTICK ((struct systick *) 0xe000e010)
 
 struct nvic {
   volatile uint32_t ISER[8], RESERVED0[24], ICER[8], RSERVED1[24], ISPR[8],
@@ -39,20 +39,19 @@ struct nvic {
 };
 #define NVIC ((struct nvic *) 0xe000e100)
 
-static inline void NVIC_Set_Prio(int irq, uint32_t prio) {
+static inline void nvic_set_prio(int irq, uint32_t prio) {
   NVIC->IP[irq] = prio << 4;
 }
 
-static inline void NVIC_Enable_IRQ(uint32_t n) {
-  NVIC->ISER[n >> 5UL] = (uint32_t) (1UL << (n & 0x1fUL));
+static inline void nvic_enable_irq(int irq) {
+  NVIC->ISER[irq >> 5] = (uint32_t) (1 << (irq & 31));
 }
 
-static inline uint32_t SysTick_Config(uint32_t ticks) {
-  if ((ticks - 1) > 0xffffff) return 1;  // Systick timer is 24 bit
-  SysTick->LOAD = ticks - 1;
-  SysTick->VAL = 0;
-  SysTick->CTRL = BIT(0) | BIT(1) | BIT(2);
-  return 0;
+static inline void systick_config(uint32_t ticks) {
+  if ((ticks - 1) > 0xffffff) return;  // Systick timer is 24 bit
+  SYSTICK->LOAD = ticks - 1;
+  SYSTICK->VAL = 0;
+  SYSTICK->CTRL = BIT(0) | BIT(1) | BIT(2);  // Enable systick
 }
 
 struct flash {
@@ -82,6 +81,9 @@ static inline void gpio_off(uint16_t pin) {
 static inline void gpio_toggle(uint16_t pin) {
   gpio_bank(pin)->ODR ^= BIT(pin & 255);
 }
+static inline int gpio_read(uint16_t pin) {
+  return gpio_bank(pin)->IDR & BIT(pin & 255) ? 1 : 0;
+}
 static inline void gpio_init(uint16_t pin, uint8_t mode, uint8_t type,
                              uint8_t speed, uint8_t pull, uint8_t af) {
   struct gpio *gpio = gpio_bank(pin);
@@ -104,6 +106,28 @@ static inline void gpio_input(uint16_t pin) {
 static inline void gpio_output(uint16_t pin) {
   gpio_init(pin, GPIO_MODE_OUTPUT, GPIO_OTYPE_PUSH_PULL, GPIO_SPEED_HIGH,
             GPIO_PULL_NONE, 0);
+}
+
+struct syscfg {
+  volatile uint32_t MEMRMP, PMC, EXTICR[4], RESERVED[2], CMPCR;
+};
+#define SYSCFG ((struct syscfg *) 0x40013800)
+
+struct exti {
+  volatile uint32_t IMR, EMR, RTSR, FTSR, SWIER, PR;
+};
+#define EXTI ((struct exti *) 0x40013c00)
+
+static inline void irq_attach(uint16_t pin) {
+  uint8_t bank = (uint8_t) (pin >> 8), n = (uint8_t) (pin & 255);
+  SYSCFG->EXTICR[n / 4] &= ~(15UL << ((n % 4) * 4));
+  SYSCFG->EXTICR[n / 4] |= (uint32_t) (bank << ((n % 4) * 4));
+  nvic_enable_irq(6 + n / 4);
+  EXTI->IMR |= BIT(n);
+  EXTI->RTSR |= BIT(n);
+  EXTI->FTSR |= BIT(n);
+  // SYSCFG->EXTICR[3] = 32 | 16;
+  // nvic_enable_irq(9);
 }
 
 struct rcc {
@@ -153,6 +177,7 @@ static inline uint8_t uart_read_byte(struct uart *uart) {
   return (uint8_t) (uart->RDR & 255);
 }
 
+#if 0
 static inline void init_clock(void) {
   FLASH->ACR = 0x12;                     // Set flash
   RCC->CR |= BIT(0);                     // HSI ON, 16 MHz
@@ -171,3 +196,4 @@ static inline void init_clock(void) {
   RCC->CFGR &= ~3UL;                      // Clear clock source
   RCC->CFGR |= 2;                         // Set PLL clock source
 }
+#endif

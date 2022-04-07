@@ -40,7 +40,7 @@ bool mg_open_listener(struct mg_connection *c, const char *url) {
 void mg_mgr_poll(struct mg_mgr *mgr, int ms) {
   // struct mip_if *ifp = (struct mip_if *) mgr->userdata;
   struct mg_connection *c, *tmp;
-  int64_t now = mg_millis();
+  uint64_t now = mg_millis();
   mg_timer_poll(now);
   for (c = mgr->conns; c != NULL; c = tmp) {
     tmp = c->next;

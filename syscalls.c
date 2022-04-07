@@ -18,6 +18,11 @@ void *_sbrk(int incr) {
   return prev_heap;
 }
 
+int _open(const char *path) {
+  (void) path;
+  return -1;
+}
+
 int _close(int fd) {
   (void) fd;
   return -1;

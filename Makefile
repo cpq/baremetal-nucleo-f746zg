@@ -2,12 +2,12 @@ TARGET  	= firmware
 ARCH    	= arm-none-eabi
 OPTS			?= -g3 -Os
 WARN 			?= -W -Wall -Wextra -Werror -Wundef -Wshadow -Wdouble-promotion -Wformat-truncation -fno-common -Wconversion
-DEFS			?= -I. -Imongoose -Imip -DMG_ENABLE_LOG=0 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ARCH=MG_ARCH_CUSTOM
+DEFS			?= -I. -Imongoose -Imip -DMG_ENABLE_LOG=0 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ARCH=MG_ARCH_CUSTOM -DMG_ENABLE_FILE=0
 MCUFL   	?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
 CFLAGS  	?= $(WARN) $(OPTS) $(MCUFL) $(DEFS) $(DEFS)
 LDFLAGS 	?= -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
 
-SOURCES 	= boot.s main.c syscalls.c #mongoose/mongoose.c mongoose_custom.c
+SOURCES 	= boot.s main.c syscalls.c mip/mip.c mongoose/mongoose.c mongoose_custom.c
 
 mongoose/mongoose.c:
 	git clone --depth 1 https://github.com/cesanta/mongoose
@@ -19,6 +19,7 @@ $(TARGET).bin: $(TARGET).elf
 $(TARGET).elf: $(SOURCES)
 	$(ARCH)-gcc $(SOURCES) $(CFLAGS) $(LDFLAGS) -o $@
 
+# Note: on "unknown chip id" flash error, wire BOOT0 to VDD and st-flash erase
 flash: $(TARGET).bin
 	st-flash --reset write $(TARGET).bin 0x8000000
 

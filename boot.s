@@ -23,7 +23,7 @@
 .word irq_systick         // 15 SysTick
 
 // 98 STM32 handlers
-.word halt,halt,halt,halt,halt,halt,halt,halt,halt,halt       // 0
+.word halt,halt,halt,halt,halt,halt,halt,halt,halt,irq_exti   // 0
 .word halt,halt,halt,halt,halt,halt,halt,halt,halt,halt       // 10
 .word halt,halt,halt,halt,halt,halt,halt,halt,halt,halt       // 20
 .word halt,halt,halt,halt,halt,halt,halt,halt,halt,halt       // 30

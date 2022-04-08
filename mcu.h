@@ -13,8 +13,6 @@
 #define REG(x) ((volatile uint32_t *) (x))
 #define PIN(bank, num) ((((bank) - 'A') << 8) | (num))
 #define FREQ 16000000
-#define ICTR 0xe000e004
-#define ICSR 0xe000ed04
 
 static inline void init_ram(void) {
   extern uint32_t _sbss, _ebss;
@@ -27,26 +25,23 @@ static inline void spin(volatile uint32_t count) {
   while (count--) asm("nop");
 }
 
-struct systick {
-  volatile uint32_t CTRL, LOAD, VAL, CALIB;
-};
-#define SYSTICK ((struct systick *) 0xe000e010)
-
 struct nvic {
   volatile uint32_t ISER[8], RESERVED0[24], ICER[8], RSERVED1[24], ISPR[8],
       RESERVED2[24], ICPR[8], RESERVED3[24], IABR[8], RESERVED4[56], IP[240],
       RESERVED5[644], STIR;
 };
 #define NVIC ((struct nvic *) 0xe000e100)
-
 static inline void nvic_set_prio(int irq, uint32_t prio) {
   NVIC->IP[irq] = prio << 4;
 }
-
 static inline void nvic_enable_irq(int irq) {
   NVIC->ISER[irq >> 5] = (uint32_t) (1 << (irq & 31));
 }
 
+struct systick {
+  volatile uint32_t CTRL, LOAD, VAL, CALIB;
+};
+#define SYSTICK ((struct systick *) 0xe000e010)
 static inline void systick_config(uint32_t ticks) {
   if ((ticks - 1) > 0xffffff) return;  // Systick timer is 24 bit
   SYSTICK->LOAD = ticks - 1;
@@ -122,11 +117,12 @@ static inline void irq_attach(uint16_t pin) {
   uint8_t bank = (uint8_t) (pin >> 8), n = (uint8_t) (pin & 255);
   SYSCFG->EXTICR[n / 4] &= ~(15UL << ((n % 4) * 4));
   SYSCFG->EXTICR[n / 4] |= (uint32_t) (bank << ((n % 4) * 4));
-  nvic_enable_irq(6 + n / 4);
   EXTI->IMR |= BIT(n);
   EXTI->RTSR |= BIT(n);
   EXTI->FTSR |= BIT(n);
-  // SYSCFG->EXTICR[3] = 32 | 16;
+  // nvic_set_prio(6 + n / 4, 1);
+  nvic_enable_irq(n <= 4 ? 6 + n : n < 10 ? 23 : 40);
+  // SYSCFG->EXTICR[3] = 32;
   // nvic_enable_irq(9);
 }
 
@@ -159,20 +155,16 @@ static inline void uart_init(struct uart *uart, unsigned long baud) {
   uart->BRR = FREQ / baud;                // Set baud rate, TRM 29.5.4
   uart->CR1 |= BIT(0) | BIT(2) | BIT(3);  // Set UE, RE, TE
 }
-
 static inline void uart_write_byte(struct uart *uart, uint8_t byte) {
   uart->TDR = byte;
   while ((uart->ISR & BIT(7)) == 0) spin(1);
 }
-
 static inline void uart_write_buf(struct uart *uart, char *buf, size_t len) {
   while (len-- > 0) uart_write_byte(uart, *(uint8_t *) buf++);
 }
-
 static inline int uart_read_ready(struct uart *uart) {
   return uart->ISR & BIT(5);  // If RXNE bit is set, data is ready
 }
-
 static inline uint8_t uart_read_byte(struct uart *uart) {
   return (uint8_t) (uart->RDR & 255);
 }

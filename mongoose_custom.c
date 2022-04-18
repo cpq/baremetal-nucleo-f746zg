@@ -41,7 +41,7 @@ void mg_mgr_poll(struct mg_mgr *mgr, int ms) {
   // struct mip_if *ifp = (struct mip_if *) mgr->userdata;
   struct mg_connection *c, *tmp;
   uint64_t now = mg_millis();
-  mg_timer_poll(now);
+  mg_timer_poll(&mgr->timers, now);
   for (c = mgr->conns; c != NULL; c = tmp) {
     tmp = c->next;
     mg_call(c, MG_EV_POLL, &now);

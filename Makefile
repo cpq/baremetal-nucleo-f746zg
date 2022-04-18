@@ -1,13 +1,20 @@
 TARGET  	= firmware
 ARCH    	= arm-none-eabi
-OPTS			?= -g3 -Os
+OPTS			?= -g3 -O0
 WARN 			?= -W -Wall -Wextra -Werror -Wundef -Wshadow -Wdouble-promotion -Wformat-truncation -fno-common -Wconversion
 DEFS			?= -I. -Imongoose -Imip -DMG_ENABLE_LOG=0 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ARCH=MG_ARCH_CUSTOM -DMG_ENABLE_FILE=0
+
+#CUBE      ?= ../STM32CubeF7
+#DEFS      += -I$(CUBE)/Drivers/STM32F7xx_HAL_Driver/Inc
+#DEFS      += -I$(CUBE)/Drivers/CMSIS/Device/ST/STM32F7xx/Include
+#DEFS      += -I$(CUBE)/Drivers/CMSIS/Include
+#DEFS      += -DSTM32F746xx
+
 MCUFL   	?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
 CFLAGS  	?= $(WARN) $(OPTS) $(MCUFL) $(DEFS) $(DEFS)
 LDFLAGS 	?= -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
 
-SOURCES 	= boot.s main.c syscalls.c mip/mip.c mongoose/mongoose.c mongoose_custom.c
+SOURCES 	= boot.s main.c eth.c syscalls.c mip/mip.c mongoose/mongoose.c mongoose_custom.c
 
 mongoose/mongoose.c:
 	git clone --depth 1 https://github.com/cesanta/mongoose
@@ -16,7 +23,7 @@ mongoose/mongoose.c:
 $(TARGET).bin: $(TARGET).elf
 	$(ARCH)-objcopy -O binary $< $@
 
-$(TARGET).elf: $(SOURCES)
+$(TARGET).elf: $(SOURCES) mcu.h
 	$(ARCH)-gcc $(SOURCES) $(CFLAGS) $(LDFLAGS) -o $@
 
 # Note: on "unknown chip id" flash error, wire BOOT0 to VDD and st-flash erase

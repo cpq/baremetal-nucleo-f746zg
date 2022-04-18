@@ -41,9 +41,3 @@ _reset:
   ldr sp, = _estack
   bl main
   b .
-
-.thumb_func
-halt:   b .
-
-.thumb_func
-pass:   bx lr

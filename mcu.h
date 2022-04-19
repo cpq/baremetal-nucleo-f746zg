@@ -58,7 +58,7 @@ struct systick {
   volatile uint32_t CTRL, LOAD, VAL, CALIB;
 };
 #define SYSTICK ((struct systick *) 0xe000e010)  // 2.2.2
-static inline void systick_config(uint32_t ticks) {
+static inline void systick_init(uint32_t ticks) {
   if ((ticks - 1) > 0xffffff) return;  // Systick timer is 24 bit
   SYSTICK->LOAD = ticks - 1;
   SYSTICK->VAL = 0;
@@ -201,7 +201,6 @@ void eth_write_phy(uint8_t addr, uint8_t reg, uint32_t val);
 void eth_send(const void *buf, size_t len);
 
 static inline void clock_init(void) {
-  FLASH->ACR |= 7;  //| BIT(8) | BIT(9);           // Flash latency 7, prefetch
 #if 0
   RCC->APB1ENR |= BIT(28);                     // Power enable
   PWR->CR1 |= 3UL << 14;                       // Voltage regulator scale 3
@@ -210,6 +209,7 @@ static inline void clock_init(void) {
   PWR->CR1 |= BIT(17);                         // Enable overdrive switching
   while ((PWR->CSR1 & BIT(17)) == 0) spin(1);  // Wait until done
 #endif
+  FLASH->ACR |= 7 | BIT(8) | BIT(9);          // Flash latency 7, prefetch
   RCC->PLLCFGR &= ~((BIT(15) - 1));           // PLL = HSI * N / M / P
   RCC->PLLCFGR |= 8UL | (216UL << 6);         // M = 8, N = 216, P = 2
   RCC->CR |= BIT(24);                         // Enable PLL

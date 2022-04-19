@@ -28,13 +28,13 @@ uint64_t mg_millis(void) {  // Declare our own uptime function
 
 void halt(void) {     // Catch-all handler for all sorts of faults
   gpio_output(LED3);  // Setup red LED
-  for (;;) spin(299999), gpio_toggle(LED3);  // Blink LED infinitely
+  for (;;) spin(2999999), gpio_toggle(LED3);  // Blink LED infinitely
 }
 
 int main(void) {
   ram_init();                        // Initialise RAM - bss, etc
   clock_init();                      // Set clock to 216MHz
-  systick_config(FREQ / 1000);       // Increment s_ticks every millisecond
+  systick_init(FREQ / 1000);         // Increment s_ticks every millisecond
   gpio_output(LED2);                 // Set LED to output
   gpio_input(BTN1);                  // Set button to input
   irq_exti_attach(BTN1);             // Attach BTN1 to exti

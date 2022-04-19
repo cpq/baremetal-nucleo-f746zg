@@ -32,12 +32,10 @@ void halt(void) {     // Catch-all handler for all sorts of faults
 }
 
 int main(void) {
-  ram_init();         // Initialise RAM - bss, etc
-  clock_init();       // Set clock to 216MHz
-  gpio_output(LED2);  // Set LED to output
-  gpio_on(LED2);      // Set LED to output
-  halt();
+  ram_init();                        // Initialise RAM - bss, etc
+  clock_init();                      // Set clock to 216MHz
   systick_config(FREQ / 1000);       // Increment s_ticks every millisecond
+  gpio_output(LED2);                 // Set LED to output
   gpio_input(BTN1);                  // Set button to input
   irq_exti_attach(BTN1);             // Attach BTN1 to exti
   static struct uart *uart = UART3;  // Initialise UART3

@@ -1,16 +1,10 @@
 TARGET  	= firmware
 ARCH    	= arm-none-eabi
-OPTS			?= -g3 -O0
+OPTS			?= -g3 -O0 -ffunction-sections -fdata-sections
 WARN 			?= -W -Wall -Wextra -Werror -Wundef -Wshadow -Wdouble-promotion -Wformat-truncation -fno-common -Wconversion
 DEFS			?= -I. -Imongoose -Imip -DMG_ENABLE_LOG=0 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ARCH=MG_ARCH_CUSTOM -DMG_ENABLE_FILE=0
-
-#CUBE      ?= ../STM32CubeF7
-#DEFS      += -I$(CUBE)/Drivers/STM32F7xx_HAL_Driver/Inc
-#DEFS      += -I$(CUBE)/Drivers/CMSIS/Device/ST/STM32F7xx/Include
-#DEFS      += -I$(CUBE)/Drivers/CMSIS/Include
-#DEFS      += -DSTM32F746xx
-
-MCUFL   	?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
+#MCUFL   	?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
+MCUFL   	?= -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16
 CFLAGS  	?= $(WARN) $(OPTS) $(MCUFL) $(DEFS) $(DEFS)
 LDFLAGS 	?= -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
 
@@ -35,19 +29,12 @@ openocd:
 
 ARGS ?= -ex 'b main'
 gdb: $(TARGET).elf
-	$(ARCH)-gdb \
-  -ex 'set confirm off' \
-  -ex 'target extended-remote :3333' \
-  -ex 'monitor arm semihosting enable' \
-  -ex 'monitor reset halt' \
-  -ex 'load' \
-  -ex 'monitor reset init' \
-  $(ARGS) \
-  -ex 'r' \
-  $(TARGET).elf
+	$(ARCH)-gdb -ex 'set confirm off' -ex 'target extended-remote :3333' \
+  -ex 'monitor arm semihosting enable' -ex 'monitor reset halt' \
+  -ex 'load' -ex 'monitor reset init' $(ARGS) -ex 'r' $(TARGET).elf
 
 mon:
 	esputil -p /dev/ttyACM0 monitor
 
 clean:
-	@rm -rf $(TARGET).*
+	@rm -rf $(TARGET).* *.su

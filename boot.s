@@ -39,5 +39,6 @@
 .thumb_func
 _reset:
   ldr sp, = _estack
+
   bl main
   b .

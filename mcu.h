@@ -13,8 +13,8 @@
 #define PIN(bank, num) ((((bank) - 'A') << 8) | (num))
 #define PINNO(pin) (pin & 255)
 #define PINBANK(pin) (pin >> 8)
-#define FREQ 16000000
-//#define FREQ 216000000
+//#define FREQ 16000000
+#define FREQ 216000000
 
 static inline void ram_init(void) {
   extern uint32_t _sbss, _ebss;
@@ -69,7 +69,7 @@ static inline void systick_config(uint32_t ticks) {
 struct flash {
   volatile uint32_t ACR, KEYR, OPTKEYR, SR, CR, AR, RESERVED, OBR, WRPR;
 };
-#define FLASH ((struct flash *) 0x40022000)
+#define FLASH ((struct flash *) 0x40023c00)
 
 enum { GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_AF, GPIO_MODE_ANALOG };
 enum { GPIO_OTYPE_PUSH_PULL, GPIO_OTYPE_OPEN_DRAIN };
@@ -84,33 +84,29 @@ struct gpio {
 static struct gpio *gpio_bank(uint16_t pin) {
   return GPIO(PINBANK(pin));
 }
-static inline void gpio_on(uint16_t pin) {
-  gpio_bank(pin)->ODR |= BIT(PINNO(pin));
-}
-static inline void gpio_off(uint16_t pin) {
-  gpio_bank(pin)->ODR &= ~BIT(PINNO(pin));
-}
 static inline void gpio_toggle(uint16_t pin) {
-  gpio_bank(pin)->ODR ^= BIT(PINNO(pin));
+  struct gpio *gpio = gpio_bank(pin);
+  uint32_t mask = BIT(PINNO(pin));
+  gpio->BSRR |= mask << (gpio->ODR & mask ? 16 : 0);
 }
 static inline int gpio_read(uint16_t pin) {
   return gpio_bank(pin)->IDR & BIT(PINNO(pin)) ? 1 : 0;
+}
+static inline void gpio_write(uint16_t pin, int val) {
+  struct gpio *gpio = gpio_bank(pin);
+  gpio->BSRR |= BIT(PINNO(pin) + (val ? 0 : 1));
 }
 static inline void gpio_init(uint16_t pin, uint8_t mode, uint8_t type,
                              uint8_t speed, uint8_t pull, uint8_t af) {
   struct gpio *gpio = gpio_bank(pin);
   uint8_t n = (uint8_t) (PINNO(pin));
   RCC->AHB1ENR |= BIT(PINBANK(pin));  // Enable GPIO clock
-  gpio->MODER &= ~(3UL << (n * 2));
-  gpio->MODER |= ((uint32_t) mode) << (n * 2);
-  gpio->OTYPER &= ~(1UL << n);
-  gpio->OTYPER |= ((uint32_t) type) << n;
-  gpio->OSPEEDR &= ~(3UL << (n * 2));
-  gpio->OSPEEDR |= ((uint32_t) speed) << (n * 2);
-  gpio->PUPDR &= ~(3UL << (n * 2));
-  gpio->PUPDR |= ((uint32_t) pull) << (n * 2);
-  gpio->AFR[n >> 3] &= ~(15UL << ((n & 7) * 4));
-  gpio->AFR[n >> 3] |= ((uint32_t) af) << ((n & 7) * 4);
+  SETBITS(gpio->OTYPER, 1UL << n, ((uint32_t) type) << n);
+  SETBITS(gpio->OSPEEDR, 3UL << (n * 2), ((uint32_t) speed) << (n * 2));
+  SETBITS(gpio->PUPDR, 3UL << (n * 2), ((uint32_t) pull) << (n * 2));
+  SETBITS(gpio->AFR[n >> 3], 15UL << ((n & 7) * 4),
+          ((uint32_t) af) << ((n & 7) * 4));
+  SETBITS(gpio->MODER, 3UL << (n * 2), ((uint32_t) mode) << (n * 2));
 }
 static inline void gpio_input(uint16_t pin) {
   gpio_init(pin, GPIO_MODE_INPUT, GPIO_OTYPE_PUSH_PULL, GPIO_SPEED_HIGH,
@@ -167,7 +163,7 @@ static inline void uart_init(struct uart *uart, unsigned long baud) {
   gpio_init(tx, GPIO_MODE_AF, GPIO_OTYPE_PUSH_PULL, GPIO_SPEED_HIGH, 0, af);
   gpio_init(rx, GPIO_MODE_AF, GPIO_OTYPE_PUSH_PULL, GPIO_SPEED_HIGH, 0, af);
   uart->CR1 = 0;                          // Disable this UART
-  uart->BRR = FREQ / baud;                // Set baud rate, TRM 29.5.4
+  uart->BRR = FREQ / 4 / baud;            // Baud rate. /4 is PLL prescaler
   uart->CR1 |= BIT(0) | BIT(2) | BIT(3);  // Set UE, RE, TE
 }
 static inline void uart_write_byte(struct uart *uart, uint8_t byte) {
@@ -205,17 +201,6 @@ void eth_write_phy(uint8_t addr, uint8_t reg, uint32_t val);
 void eth_send(const void *buf, size_t len);
 
 static inline void clock_init(void) {
-#if 0
-  FLASH->ACR |= 7;
-  RCC->PLLCFGR &= ~32767UL;
-  RCC->PLLCFGR |= 8 | (216UL << 6);
-  RCC->CR |= 1UL << 24;
-  while ((RCC->CR & (1UL << 25)) == 0) (void) 0;
-  RCC->CFGR = 2 | (5UL << 10) | (4UL << 13);
-  while ((RCC->CFGR & 12) == 0) (void) 0;
-  return;
-#endif
-
   FLASH->ACR |= 7;  //| BIT(8) | BIT(9);           // Flash latency 7, prefetch
 #if 0
   RCC->APB1ENR |= BIT(28);                     // Power enable
@@ -226,9 +211,9 @@ static inline void clock_init(void) {
   while ((PWR->CSR1 & BIT(17)) == 0) spin(1);  // Wait until done
 #endif
   RCC->PLLCFGR &= ~((BIT(15) - 1));           // PLL = HSI * N / M / P
-  RCC->PLLCFGR |= 8UL | (72UL << 6);          // M = 8, N = 216, P = 2
-  RCC->CR |= BIT(24);                         // PLL ON
+  RCC->PLLCFGR |= 8UL | (216UL << 6);         // M = 8, N = 216, P = 2
+  RCC->CR |= BIT(24);                         // Enable PLL
   while ((RCC->CR & BIT(25)) == 0) spin(1);   // Wait until done
-  RCC->CFGR = 2 | (5UL << 10) | (4UL << 13);  // Set prescalers
+  RCC->CFGR = 2 | (5UL << 10) | (4UL << 13);  // Set prescalers and PLL clock
   while ((RCC->CFGR & 12) == 0) spin(1);      // Wait until done
 }

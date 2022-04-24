@@ -9,15 +9,13 @@
 #define LED3 PIN('B', 14)  // On-board LED pin
 #define BTN1 PIN('C', 13)  // On-board user button
 
-static uint64_t s_ticks, s_exti, s_eth;  // Counters, increased by IRQ handlers
-static struct mg_mgr s_mgr;              // Mongoose event manager
+static uint64_t s_ticks, s_exti;  // Counters, increased by IRQ handlers
+static struct mg_mgr s_mgr;       // Mongoose event manager
 
 static void timer_fn(void *arg) {  // Timer function
   uint32_t sr = eth_read_phy(PHY_ADDR, PHY_BSR);
   const char *link_status = sr & BIT(2) ? "up" : "down";
-  printf("%p %u %s %u %lx %s %lx %lx %lx %lx\n", arg, (unsigned) s_eth, "hi",
-         (unsigned) s_ticks, sr, link_status, PWR->CR1, RCC->CR, RCC->PLLCFGR,
-         RCC->CFGR);
+  printf("--> %6u %p %s\n", (unsigned) s_ticks, arg, link_status);
   eth_send("boo", 3);
   gpio_toggle(LED2);
 }
@@ -56,8 +54,4 @@ void irq_systick(void) {  // Systick IRQ handler
 void irq_exti(void) {  // EXTI IRQ handler
   s_exti++;
   if (EXTI->PR & BIT(PINNO(BTN1))) EXTI->PR = BIT(PINNO(BTN1));
-}
-
-void irq_eth(void) {  // Ethernet IRQ handler
-  s_eth++;
 }

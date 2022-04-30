@@ -12,7 +12,9 @@ all: $(TARGET).bin
 
 mongoose/mongoose.c:
 	git clone --depth 1 https://github.com/cesanta/mongoose
-	git clone --depth 1 https://github.com/cesanta/mip
+
+mip/mip.c:
+	git clone --depth 1 -b 0.1.0 https://github.com/cesanta/mip
 
 $(TARGET).bin: $(TARGET).elf
 	$(ARCH)-objcopy -O binary $< $@

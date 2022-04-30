@@ -56,8 +56,8 @@ static void eth_recv_cb(void *userdata, void *buf, size_t len) {
 }
 
 static void blink_cb(void *arg) {  // Blink periodically
-  // struct mip_if *ifp = arg;
-  // MG_INFO(("--> %u %s", (unsigned) s_ticks, ifp->up ? "up" : "down"));
+  struct mip_if *ifp = arg;
+  MG_INFO(("ticks: %u, eth: %s", (unsigned) s_ticks, ifp->up ? "up" : "down"));
   gpio_toggle(LED2);
   (void) arg;
 }
@@ -79,7 +79,8 @@ int main(void) {
   ram_init();                        // Initialise RAM - bss, etc
   clock_init();                      // Set clock to 216MHz
   systick_init(FREQ / 1000);         // Increment s_ticks every millisecond
-  gpio_output(LED2);                 // Set LED to output
+  gpio_output(LED1);                 // Setup green LED
+  gpio_output(LED2);                 // Setup blue LED
   gpio_input(BTN1);                  // Set button to input
   irq_exti_attach(BTN1);             // Attach BTN1 to exti
   uart_init(uart, 115200);           // It is wired to the debug port
@@ -137,4 +138,6 @@ void irq_systick(void) {  // Systick IRQ handler
 void irq_exti(void) {  // EXTI IRQ handler
   s_exti++;
   if (EXTI->PR & BIT(PINNO(BTN1))) EXTI->PR = BIT(PINNO(BTN1));
+  // No debounce logic. Turn LED based on button status
+  gpio_write(LED1, gpio_read(BTN1));
 }

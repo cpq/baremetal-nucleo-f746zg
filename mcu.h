@@ -93,9 +93,9 @@ static inline void gpio_toggle(uint16_t pin) {
 static inline int gpio_read(uint16_t pin) {
   return gpio_bank(pin)->IDR & BIT(PINNO(pin)) ? 1 : 0;
 }
-static inline void gpio_write(uint16_t pin, int val) {
+static inline void gpio_write(uint16_t pin, bool val) {
   struct gpio *gpio = gpio_bank(pin);
-  gpio->BSRR |= BIT(PINNO(pin) + (val ? 0 : 1));
+  gpio->BSRR |= BIT(PINNO(pin)) << (val ? 0 : 16);
 }
 static inline void gpio_init(uint16_t pin, uint8_t mode, uint8_t type,
                              uint8_t speed, uint8_t pull, uint8_t af) {

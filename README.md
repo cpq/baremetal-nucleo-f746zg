@@ -1,12 +1,14 @@
 # Bare metal firmware for NUCLEO-F746ZG board
 
-- No dependencies: no HAL, no CMSIS
-- Hand-written [mcu.h](mcu.h) header (no CMSIS) based on [datasheet](https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
-- No RTOS
-- SysTick based software timer
-- LED blink
-- Ethernet networking: HTTP server based on [Mongoose Library](https://github.com/cesanta/mongoose) with experimental built-in TCP/IP stack
-- Ethernet, systick are interrupt driven
+- No dependencies: no HAL, no CMSIS, no RTOS
+- Hand-written [mcu.h](mcu.h) header based on a [datasheet](https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+- Interrupt-driven ethernet driver and systick
+- Blue LED blink
+- Interrupt-driven user button handler: turns off/on green LED
+- Catch-all fault handler that blinks red LED
+- Integrated [mongoose](https://github.com/cesanta/mongoose) and
+  [mip](https://github.com/cesanta/mip) that implement
+  UDP server, HTTP server, and SNTP time synchronisation
 
 ## Requirements
 

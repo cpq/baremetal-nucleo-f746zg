@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -179,26 +180,6 @@ static inline int uart_read_ready(struct uart *uart) {
 static inline uint8_t uart_read_byte(struct uart *uart) {
   return (uint8_t) (uart->RDR & 255);
 }
-
-struct eth {
-  uint32_t MACCR, MACFFR, MACHTHR, MACHTLR, MACMIIAR, MACMIIDR, MACFCR,
-      MACVLANTR, RESERVED0[2], MACRWUFFR, MACPMTCSR, RESERVED1, MACDBGR, MACSR,
-      MACIMR, MACA0HR, MACA0LR, MACA1HR, MACA1LR, MACA2HR, MACA2LR, MACA3HR,
-      MACA3LR, RESERVED2[40], MMCCR, MMCRIR, MMCTIR, MMCRIMR, MMCTIMR,
-      RESERVED3[14], MMCTGFSCCR, MMCTGFMSCCR, RESERVED4[5], MMCTGFCR,
-      RESERVED5[10], MMCRFCECR, MMCRFAECR, RESERVED6[10], MMCRGUFCR,
-      RESERVED7[334], PTPTSCR, PTPSSIR, PTPTSHR, PTPTSLR, PTPTSHUR, PTPTSLUR,
-      PTPTSAR, PTPTTHR, PTPTTLR, RESERVED8, PTPTSSR, PTPPPSCR, RESERVED9[564],
-      DMABMR, DMATPDR, DMARPDR, DMARDLAR, DMATDLAR, DMASR, DMAOMR, DMAIER,
-      DMAMFBOCR, DMARSWTR, RESERVED10[8], DMACHTDR, DMACHRDR, DMACHTBAR,
-      DMACHRBAR;
-};
-#define ETH ((struct eth *) 0x40028000)
-enum { PHY_ADDR = 0, PHY_BCR = 0, PHY_BSR = 1 };
-void eth_init(void);
-uint32_t eth_read_phy(uint8_t addr, uint8_t reg);
-void eth_write_phy(uint8_t addr, uint8_t reg, uint32_t val);
-void eth_send(const void *buf, size_t len);
 
 static inline void clock_init(void) {
 #if 0

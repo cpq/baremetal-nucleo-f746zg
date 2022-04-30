@@ -2,9 +2,8 @@ TARGET  = firmware
 ARCH    = arm-none-eabi
 OPTS    ?= -g3 -O0 -ffunction-sections -fdata-sections
 WARN    ?= -W -Wall -Wextra -Werror -Wundef -Wshadow -Wdouble-promotion -Wformat-truncation -fno-common -Wconversion
-DEFS    ?= -I. -Imongoose -Imip -DMG_ENABLE_LOG=0 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ARCH=MG_ARCH_CUSTOM -DMG_ENABLE_FILE=0
-#MCUFL  ?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
-MCUFL   ?= -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16
+DEFS    ?= -I. -Imongoose -Imip -DMG_ARCH=MG_ARCH_CUSTOM -DMIP_DEBUG=1 -DMG_ENABLE_CUSTOM_MILLIS=1 -DMG_ENABLE_LINES=1
+MCUFL   ?= -mcpu=cortex-m7 -mthumb -mfloat-abi=softfp -mfpu=vfpv4
 CFLAGS  ?= $(WARN) $(OPTS) $(MCUFL) $(DEFS) $(DEFS)
 LDFLAGS ?= -Tlink.ld -nostartfiles -nostdlib --specs nano.specs -lc -lgcc -Wl,--gc-sections -Wl,-Map=$@.map
 SOURCES = boot.s main.c eth.c syscalls.c mip/mip.c mongoose/mongoose.c mongoose_custom.c

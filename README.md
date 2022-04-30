@@ -13,3 +13,25 @@
 - GNU make
 - [ARM GCC](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm) toolchain for build
 - [st-link](https://github.com/stlink-org/stlink) for flashing
+
+## Usage
+
+Plugin your Nucleo board into USB, and attach an Ethernet cable.
+To build and flash:
+
+```sh
+make clean flash
+```
+
+To see debug log, use any serial monitor program like `cu`:
+
+```sh
+cu -l /dev/ttyACM0 -s 115200
+```
+
+Alternatively, build `esputil` utility from https://github.com/cpq/mdk,
+then use can use a single command to rebuild and monitor logs:
+
+```
+make clean flash mon
+```

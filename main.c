@@ -1,7 +1,7 @@
 // Copyright (c) 2022 Cesanta Software Limited
 // All rights reserved
 
-#include "eth.h"
+#include "drivers/mip_driver_stm32.h"
 #include "mcu.h"
 #include "mip.h"
 #include "mongoose.h"
@@ -11,9 +11,8 @@
 #define LED3 PIN('B', 14)  // On-board LED pin (red)
 #define BTN1 PIN('C', 13)  // On-board user button
 
-static uint64_t s_ticks, s_exti;  // Counters, increased by IRQ handlers
-extern void mg_attach_mip(struct mg_mgr *mgr, struct mip_if *ifp);
-static time_t s_boot_timestamp = 0;               // Updated by SNTP
+static uint64_t s_ticks, s_exti;     // Counters, increased by IRQ handlers
+static time_t s_boot_timestamp = 0;  // Updated by SNTP
 static struct mg_connection *s_sntp_conn = NULL;  // SNTP connection
 
 // We have no valid system time(), and we need it for TLS. Implement it
@@ -38,26 +37,14 @@ static void sfn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 
 // SNTP timer function. Sync up time periodically
 static void sntp_cb(void *param) {
-  struct mg_mgr *mgr = param;
+  struct mg_mgr *mgr = (struct mg_mgr *) param;
   if (s_sntp_conn == NULL) s_sntp_conn = mg_sntp_connect(mgr, NULL, sfn, NULL);
   if (s_boot_timestamp < 9999) mg_sntp_send(s_sntp_conn, 0UL);
 }
 
-static void tx(void *buf, size_t len, void *userdata) {
-  eth_driver_transmit_frame(buf, len);
-  (void) userdata;
-  // printf("TX %p %u\n", ifp->frame, (unsigned) ifp->frame_len);
-}
-
-static void eth_recv_cb(void *userdata, void *buf, size_t len) {
-  struct mip_if *ifp = userdata;
-  mip_rx(ifp, buf, len);
-  // printf("RX %p %p %u\n", userdata, buf, (unsigned) len);
-}
-
 static void blink_cb(void *arg) {  // Blink periodically
-  struct mip_if *ifp = arg;
-  MG_INFO(("ticks: %u, eth: %s", (unsigned) s_ticks, ifp->up ? "up" : "down"));
+  // struct mip_if *ifp = (struct mip_if *) arg;
+  MG_INFO(("ticks: %u", (unsigned) s_ticks));
   gpio_toggle(LED2);
   (void) arg;
 }
@@ -85,23 +72,6 @@ int main(void) {
   irq_exti_attach(BTN1);             // Attach BTN1 to exti
   uart_init(uart, 115200);           // It is wired to the debug port
 
-  // Initialize MIP stack
-  uint8_t buf[2048];
-  struct mip_if mif = {.tx = tx,
-                       .phy = eth_driver_has_carrier,
-                       .mac = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
-                       .use_dhcp = true,
-                       .buf = buf,
-                       .len = sizeof(buf)};
-
-  struct mg_mgr mgr;  // Initialise Mongoose event manager
-  mg_mgr_init(&mgr);  // and attach it to the MIP interface
-  mg_listen(&mgr, "udp://0.0.0.0:1234", fn, NULL);
-  mg_attach_mip(&mgr, &mif);
-  mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mif);
-  mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
-  mg_log_set("3");
-
   // Initialise Ethernet. Enable MAC GPIO pins, see
   // https://www.farnell.com/datasheets/2014265.pdf section 6.10
   uint16_t pins[] = {PIN('A', 1),  PIN('A', 2),  PIN('A', 7),
@@ -115,9 +85,23 @@ int main(void) {
   RCC->APB2ENR |= BIT(14);                      // Enable SYSCFG
   SYSCFG->PMC |= BIT(23);                       // Use RMII. Goes first!
   RCC->AHB1ENR |= BIT(25) | BIT(26) | BIT(27);  // Enable Ethernet clocks
-  eth_driver_init(&mif, eth_recv_cb);
 
-  for (;;) mg_mgr_poll(&mgr, 0);
+  struct mg_mgr mgr;  // Initialise Mongoose event manager
+  mg_mgr_init(&mgr);  // and attach it to the MIP interface
+  mg_listen(&mgr, "udp://0.0.0.0:1234", fn, NULL);
+  mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mgr);
+  mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
+  mg_log_set("3");
+
+  // Initialise Mongoose network stack
+  uint8_t mac[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+  struct mip_driver stm32_driver = {.init = mip_driver_stm32_init,
+                                    .tx = mip_driver_stm32_tx,
+                                    .rxcb = mip_driver_stm32_setrx,
+                                    .status = mip_driver_stm32_status};
+  mip_init(&mgr, mac, &stm32_driver);
+
+  for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop
 
   return 0;
 }
@@ -138,6 +122,5 @@ void irq_systick(void) {  // Systick IRQ handler
 void irq_exti(void) {  // EXTI IRQ handler
   s_exti++;
   if (EXTI->PR & BIT(PINNO(BTN1))) EXTI->PR = BIT(PINNO(BTN1));
-  // No debounce logic. Turn LED based on button status
-  gpio_write(LED1, gpio_read(BTN1));
+  gpio_write(LED1, gpio_read(BTN1));  // No debounce. Turn LED if button pressed
 }

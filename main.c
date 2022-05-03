@@ -52,12 +52,14 @@ static void blink_cb(void *arg) {  // Blink periodically
 // Server event handler
 static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   if (ev == MG_EV_POLL) return;
-  printf("%lu %d %p %p\n", c->id, ev, ev_data, fn_data);
-  if (ev == MG_EV_OPEN) {
-    // c->is_hexdumping = 1;
+  MG_DEBUG(("%lu %p %d %p %p", c->id, c, ev, ev_data, fn_data));
+  if (ev == MG_EV_HTTP_MSG) {
+    struct mg_http_message *hm = (struct mg_http_message *) ev_data;
+    mg_http_reply(c, 200, "", "Received request to %.*s", (int) hm->uri.len,
+                  hm->uri.ptr);
   } else if (ev == MG_EV_READ) {
-    mg_printf(c, "RECEIVED: [%.*s]", (int) c->recv.len, c->recv.buf);
-    c->recv.len = 0;  // Consume data
+    struct mg_str *data = ev_data;
+    MG_INFO(("READ: %d [%.*s]", (int) data->len, (int) data->len, data->ptr));
   }
 }
 
@@ -88,18 +90,20 @@ int main(void) {
 
   struct mg_mgr mgr;  // Initialise Mongoose event manager
   mg_mgr_init(&mgr);  // and attach it to the MIP interface
-  mg_listen(&mgr, "udp://0.0.0.0:1234", fn, NULL);
+  mg_listen(&mgr, "http://0.0.0.0:80", fn, NULL);
   mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mgr);
   mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
   mg_log_set("3");
 
   // Initialise Mongoose network stack
-  uint8_t mac[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+  struct mip_ipcfg ipcfg = {
+      {0xaa, 0xbb, 0xcc, 1, 2, 3}, 0x0202a8c0, 0xffffff, 0x0102a8c0};
+  // struct mip_ipcfg ipcfg = {{0xaa, 0xbb, 0xcc, 1, 2, 3}, 0, 0, 0};
   struct mip_driver stm32_driver = {.init = mip_driver_stm32_init,
                                     .tx = mip_driver_stm32_tx,
                                     .rxcb = mip_driver_stm32_setrx,
                                     .status = mip_driver_stm32_status};
-  mip_init(&mgr, mac, &stm32_driver);
+  mip_init(&mgr, &ipcfg, &stm32_driver);
 
   for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop
 

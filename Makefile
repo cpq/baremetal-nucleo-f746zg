@@ -14,7 +14,7 @@ mongoose/mongoose.c:
 	git clone --depth 1 https://github.com/cesanta/mongoose
 
 mip/mip.c:
-	git clone --depth 1 -b 0.1.2 https://github.com/cesanta/mip
+	git clone --depth 1 -b 0.1.3 https://github.com/cesanta/mip
 
 $(TARGET).bin: $(TARGET).elf
 	$(ARCH)-objcopy -O binary $< $@

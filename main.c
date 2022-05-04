@@ -35,16 +35,14 @@ static void sfn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   (void) fn_data;
 }
 
-// SNTP timer function. Sync up time periodically
-static void sntp_cb(void *param) {
+static void sntp_cb(void *param) {  // SNTP timer function. Sync up time
   struct mg_mgr *mgr = (struct mg_mgr *) param;
   if (s_sntp_conn == NULL) s_sntp_conn = mg_sntp_connect(mgr, NULL, sfn, NULL);
   if (s_boot_timestamp < 9999) mg_sntp_send(s_sntp_conn, 0UL);
 }
 
 static void blink_cb(void *arg) {  // Blink periodically
-  // struct mip_if *ifp = (struct mip_if *) arg;
-  MG_INFO(("ticks: %u", (unsigned) s_ticks));
+  // MG_INFO(("ticks: %u", (unsigned) s_ticks));
   gpio_toggle(LED2);
   (void) arg;
 }
@@ -55,11 +53,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   MG_DEBUG(("%lu %p %d %p %p", c->id, c, ev, ev_data, fn_data));
   if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-    mg_http_reply(c, 200, "", "Received request to %.*s", (int) hm->uri.len,
-                  hm->uri.ptr);
-  } else if (ev == MG_EV_READ) {
-    struct mg_str *data = ev_data;
-    MG_INFO(("READ: %d [%.*s]", (int) data->len, (int) data->len, data->ptr));
+    mg_http_reply(c, 200, "", "Got: %.*s\n", (int) hm->uri.len, hm->uri.ptr);
   }
 }
 
@@ -90,15 +84,17 @@ int main(void) {
 
   struct mg_mgr mgr;  // Initialise Mongoose event manager
   mg_mgr_init(&mgr);  // and attach it to the MIP interface
-  mg_listen(&mgr, "http://0.0.0.0:80", fn, NULL);
+  mg_http_listen(&mgr, "http://0.0.0.0:80", fn, NULL);
   mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mgr);
   mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
   mg_log_set("3");
 
   // Initialise Mongoose network stack
-  struct mip_ipcfg ipcfg = {
-      {0xaa, 0xbb, 0xcc, 1, 2, 3}, 0x0202a8c0, 0xffffff, 0x0102a8c0};
-  // struct mip_ipcfg ipcfg = {{0xaa, 0xbb, 0xcc, 1, 2, 3}, 0, 0, 0};
+  // Specify MAC address, and use 0 for IP, mask, GW - i.e. use DHCP
+  struct mip_ipcfg ipcfg = {{0xaa, 0xbb, 0xcc, 1, 2, 3}, 0, 0, 0};
+  // Static IP configuration: IP, mask, GW in network byte order
+  // struct mip_ipcfg ipcfg = {
+  //    {0xaa, 0xbb, 0xcc, 1, 2, 3}, 0x0202a8c0, 0xffffff, 0x0102a8c0};
   struct mip_driver stm32_driver = {.init = mip_driver_stm32_init,
                                     .tx = mip_driver_stm32_tx,
                                     .rxcb = mip_driver_stm32_setrx,

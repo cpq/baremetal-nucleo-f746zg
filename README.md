@@ -50,6 +50,10 @@ boot.
 | Command | siege -c 5 -t 5s http://IP:8000/api/stats| siege -c 5 -t 5s http://IP/api/stats |
 | Requests | 13 | 338 |
 | Per second | 2.75 | 71 |
+| Firmware size | 117k (*) | 28k |
 
 Whilst not comprehensive, this quick benchmark shows a 25x performance
 difference.
+
+(*) By default, Zephyr example is TLS-enabled. To compare sizes, a TLS-disabled
+build was done by disabling TLS in `prj.conf` and `CMakeLists.txt`

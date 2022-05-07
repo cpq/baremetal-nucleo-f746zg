@@ -5,9 +5,9 @@
 - Interrupt-driven ethernet driver and systick
 - Integrated [mongoose](https://github.com/cesanta/mongoose) and
   [mip](https://github.com/cesanta/mip) that implement
-  UDP server, HTTP server, and SNTP time synchronisation
-- Interrupt-driven software timer, blue LED blink
-- Interrupt-driven user button handler, turns off/on green LED
+  HTTP server, HTTP server, and SNTP time synchronisation
+- SysTick interrupt-driven software timer, blue LED blink
+- EXTI interrupt-driven user button handler, turns off/on green LED
 - Catch-all fault handler that blinks red LED
 
 
@@ -32,9 +32,24 @@ To see debug log, use any serial monitor program like `cu`:
 cu -l /dev/ttyACM0 -s 115200
 ```
 
-Alternatively, build `esputil` utility from https://github.com/cpq/mdk,
-then use can use a single command to rebuild and monitor logs:
+The `mon` target uses `cat` command for serial port monitoring:
 
 ```
 make clean flash mon
 ```
+
+## Benchmark
+
+A quick comparison is made with the Zephyr-based implementation, see
+source code at [http-server](https://github.com/cesanta/mongoose/tree/master/examples/zephyr/http-server).
+Note: `IP` in the table below is the IP address printed on the console after
+boot.
+
+|         | Zephyr implementation | This bare-metal implementation |
+| ------- | --------------------- | ------------------------------ |
+| Command | siege -c 5 -t 5s http://IP:8000/api/stats| siege -c 5 -t 5s http://IP/api/stats |
+| Requests | 13 | 338 |
+| Per second | 2.75 | 71 |
+
+Whilst not comprehensive, this quick benchmark shows a 25x performance
+difference.

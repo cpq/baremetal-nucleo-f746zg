@@ -17,13 +17,6 @@
 //#define FREQ 16000000
 #define FREQ 216000000
 
-static inline void ram_init(void) {
-  extern uint32_t _sbss, _ebss;
-  extern uint32_t _sdata, _edata, _sidata;
-  memset(&_sbss, 0, (size_t) (((char *) &_ebss - (char *) &_sbss)));
-  memcpy(&_sdata, &_sidata, (size_t) (((char *) &_edata - (char *) &_sdata)));
-}
-
 static inline void spin(volatile uint32_t count) {
   while (count--) asm("nop");
 }
@@ -164,7 +157,7 @@ static inline void uart_init(struct uart *uart, unsigned long baud) {
   gpio_init(tx, GPIO_MODE_AF, GPIO_OTYPE_PUSH_PULL, GPIO_SPEED_HIGH, 0, af);
   gpio_init(rx, GPIO_MODE_AF, GPIO_OTYPE_PUSH_PULL, GPIO_SPEED_HIGH, 0, af);
   uart->CR1 = 0;                          // Disable this UART
-  uart->BRR = FREQ / 4 / baud;            // Baud rate. /4 is PLL prescaler
+  uart->BRR = FREQ / 4 / baud;            // Baud rate. /4 is a PLL prescaler
   uart->CR1 |= BIT(0) | BIT(2) | BIT(3);  // Set UE, RE, TE
 }
 static inline void uart_write_byte(struct uart *uart, uint8_t byte) {
@@ -181,7 +174,7 @@ static inline uint8_t uart_read_byte(struct uart *uart) {
   return (uint8_t) (uart->RDR & 255);
 }
 
-static inline void clock_init(void) {
+static inline void clock_init(void) {  // Set clock to 216Mhz
 #if 0
   RCC->APB1ENR |= BIT(28);                     // Power enable
   PWR->CR1 |= 3UL << 14;                       // Voltage regulator scale 3
@@ -192,7 +185,7 @@ static inline void clock_init(void) {
 #endif
   FLASH->ACR |= 7 | BIT(8) | BIT(9);          // Flash latency 7, prefetch
   RCC->PLLCFGR &= ~((BIT(15) - 1));           // PLL = HSI * N / M / P
-  RCC->PLLCFGR |= 8UL | (216UL << 6);         // M = 8, N = 216, P = 2
+  RCC->PLLCFGR |= 8UL | (216UL << 6);         // M = 8, N = 216, P = 2. 216Mhz
   RCC->CR |= BIT(24);                         // Enable PLL
   while ((RCC->CR & BIT(25)) == 0) spin(1);   // Wait until done
   RCC->CFGR = 2 | (5UL << 10) | (4UL << 13);  // Set prescalers and PLL clock

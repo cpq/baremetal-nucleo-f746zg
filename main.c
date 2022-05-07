@@ -50,18 +50,54 @@ static void blink_cb(void *arg) {  // Blink periodically
 // Server event handler
 static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   if (ev == MG_EV_POLL) return;
-  MG_DEBUG(("%lu %p %d %p %p", c->id, c, ev, ev_data, fn_data));
+  // MG_DEBUG(("%lu %p %d %p %p", c->id, c, ev, ev_data, fn_data));
   if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-    mg_http_reply(c, 200, "", "Got: %.*s\n", (int) hm->uri.len, hm->uri.ptr);
+    if (mg_http_match_uri(hm, "/api/stats")) {
+      // Print some statistics about currently established connections
+      mg_printf(c, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+      mg_http_printf_chunk(c, "ID PROTO TYPE      LOCAL           REMOTE\n");
+      for (struct mg_connection *t = c->mgr->conns; t != NULL; t = t->next) {
+        char loc[40], rem[40];
+        mg_http_printf_chunk(c, "%-3lu %4s %s %-15s %s\n", t->id,
+                             t->is_udp ? "UDP" : "TCP",
+                             t->is_listening  ? "LISTENING"
+                             : t->is_accepted ? "ACCEPTED "
+                                              : "CONNECTED",
+                             mg_straddr(&t->loc, loc, sizeof(loc)),
+                             mg_straddr(&t->rem, rem, sizeof(rem)));
+      }
+      mg_http_printf_chunk(c, "");  // Don't forget the last empty chunk
+    } else {
+      mg_http_reply(c, 200, "", "Got: %.*s\n", (int) hm->uri.len, hm->uri.ptr);
+    }
   }
+  (void) fn_data;
+}
+
+uint64_t mg_millis(void) {  // Declare our own uptime function
+  return s_ticks;           // Return number of milliseconds since boot
+}
+
+void DefaultIRQHandler(void) {                // Catch-all fault handler
+  gpio_output(LED3);                          // Setup red LED
+  for (;;) spin(2999999), gpio_toggle(LED3);  // Blink LED infinitely
+}
+
+void SysTick_Handler(void) {  // SyStick IRQ handler, triggered every 1ms
+  s_ticks++;
+}
+
+void EXTI_IRQHandler(void) {
+  s_exti++;
+  if (EXTI->PR & BIT(PINNO(BTN1))) EXTI->PR = BIT(PINNO(BTN1));
+  gpio_write(LED1, gpio_read(BTN1));  // No debounce. Turn LED if button pressed
 }
 
 int main(void) {
   static struct uart *uart = UART3;  // Use UART3 - its attached to debug
-  ram_init();                        // Initialise RAM - bss, etc
   clock_init();                      // Set clock to 216MHz
-  systick_init(FREQ / 1000);         // Increment s_ticks every millisecond
+  systick_init(FREQ / 1000);         // Increment s_ticks every ms
   gpio_output(LED1);                 // Setup green LED
   gpio_output(LED2);                 // Setup blue LED
   gpio_input(BTN1);                  // Set button to input
@@ -81,6 +117,8 @@ int main(void) {
   RCC->APB2ENR |= BIT(14);                      // Enable SYSCFG
   SYSCFG->PMC |= BIT(23);                       // Use RMII. Goes first!
   RCC->AHB1ENR |= BIT(25) | BIT(26) | BIT(27);  // Enable Ethernet clocks
+  RCC->AHB1RSTR |= BIT(25);                     // ETHMAC force reset
+  RCC->AHB1RSTR &= ~BIT(25);                    // ETHMAC release reset
 
   struct mg_mgr mgr;  // Initialise Mongoose event manager
   mg_mgr_init(&mgr);  // and attach it to the MIP interface
@@ -91,36 +129,17 @@ int main(void) {
 
   // Initialise Mongoose network stack
   // Specify MAC address, and use 0 for IP, mask, GW - i.e. use DHCP
-  struct mip_ipcfg ipcfg = {{0xaa, 0xbb, 0xcc, 1, 2, 3}, 0, 0, 0};
-  // Static IP configuration: IP, mask, GW in network byte order
-  // struct mip_ipcfg ipcfg = {
-  //    {0xaa, 0xbb, 0xcc, 1, 2, 3}, 0x0202a8c0, 0xffffff, 0x0102a8c0};
+  // For static configuration, specify IP/mask/GW in network byte order
+  struct mip_ipcfg ipcfg = {
+      .mac = {0xaa, 0xbb, 0xcc, 1, 2, 3}, .ip = 0, .mask = 0, .gw = 0};
   struct mip_driver stm32_driver = {.init = mip_driver_stm32_init,
                                     .tx = mip_driver_stm32_tx,
                                     .rxcb = mip_driver_stm32_setrx,
                                     .status = mip_driver_stm32_status};
   mip_init(&mgr, &ipcfg, &stm32_driver);
 
+  MG_INFO(("Init done, starting main loop"));
   for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop
 
   return 0;
-}
-
-uint64_t mg_millis(void) {  // Declare our own uptime function
-  return s_ticks;           // Return number of milliseconds since boot
-}
-
-void halt(void) {                             // Catch-all fault handler
-  gpio_output(LED3);                          // Setup red LED
-  for (;;) spin(2999999), gpio_toggle(LED3);  // Blink LED infinitely
-}
-
-void irq_systick(void) {  // Systick IRQ handler
-  s_ticks++;
-}
-
-void irq_exti(void) {  // EXTI IRQ handler
-  s_exti++;
-  if (EXTI->PR & BIT(PINNO(BTN1))) EXTI->PR = BIT(PINNO(BTN1));
-  gpio_write(LED1, gpio_read(BTN1));  // No debounce. Turn LED if button pressed
 }

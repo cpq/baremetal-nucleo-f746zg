@@ -122,10 +122,9 @@ int main(void) {
 
   struct mg_mgr mgr;  // Initialise Mongoose event manager
   mg_mgr_init(&mgr);  // and attach it to the MIP interface
-  mg_http_listen(&mgr, "http://0.0.0.0:80", fn, NULL);
   mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mgr);
   mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
-  mg_log_set("3");
+  mg_log_set("2");
 
   // Initialise Mongoose network stack
   // Specify MAC address, and use 0 for IP, mask, GW - i.e. use DHCP
@@ -137,6 +136,10 @@ int main(void) {
                                     .rxcb = mip_driver_stm32_setrx,
                                     .status = mip_driver_stm32_status};
   mip_init(&mgr, &ipcfg, &stm32_driver);
+
+  // Important: mg_mgr_prealloc() and *_listen() calls must go after mip_init()
+  mg_mgr_prealloc(&mgr, 11, 1024);
+  mg_http_listen(&mgr, "http://0.0.0.0:80", fn, NULL);
 
   MG_INFO(("Init done, starting main loop"));
   for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop

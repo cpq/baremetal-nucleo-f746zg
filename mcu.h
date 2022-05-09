@@ -175,7 +175,7 @@ static inline uint8_t uart_read_byte(struct uart *uart) {
 }
 
 static inline void clock_init(void) {  // Set clock to 216Mhz
-#if 0
+#if 1
   RCC->APB1ENR |= BIT(28);                     // Power enable
   PWR->CR1 |= 3UL << 14;                       // Voltage regulator scale 3
   PWR->CR1 |= BIT(16);                         // Enable overdrive

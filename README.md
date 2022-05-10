@@ -40,20 +40,24 @@ make clean flash mon
 
 ## Benchmark
 
-A quick comparison is made with the Zephyr-based implementation, see
-source code at [http-server](https://github.com/cesanta/mongoose/tree/master/examples/zephyr/http-server).
+A quick comparison is made with several other implementations.
 Note: `IP` in the table below is the IP address printed on the console after
-boot.
+boot. The benchmark command is the same: `siege -c 5 -t 5s http://IP`
 
-|         | Zephyr implementation | This bare-metal implementation |
-| ------- | --------------------- | ------------------------------ |
-| Command | siege -c 5 -t 5s http://IP:8000/api/stats| siege -c 5 -t 5s http://IP/api/stats |
-| Requests | 13 | 338 |
-| Per second | 2.75 | 71 |
-| Firmware size | 117k (*) | 28k |
+|                     | Zephyr   | LWIP sockets | LWIP raw | MIP  |
+| ------------------- | -------- | ------------ | -------- | ---- |
+| Requests per second | 3        | 16           | 286      | 1080 |
+| Firmware size       | 117k (*) | 160k         | 114k     | 28k  |
 
-Whilst not comprehensive, this quick benchmark shows a 25x performance
-difference.
+- Zephyr: uses Zehypr's RTOS and TCP stack, with Mongoose library on top,
+  [source code](https://github.com/cesanta/mongoose/tree/master/examples/zephyr/http-server).
+  (*) By default, Zephyr example is TLS-enabled. To compare sizes, a TLS-disabled
+  build was done by disabling TLS in `prj.conf` and `CMakeLists.txt`
+- LWIP sockets: uses FreeRTOS and LWIP with sockets support, with Mongoose
+  library on top, [source code](https://github.com/mongoose-examples/stm32-nucleo-f746z).
+  built with `#define MG` in `Core/main.c`
+- LWIP raw: uses FreeRTOS and LWIP without sockets, LWIP's httpd server,
+  [source code](https://github.com/mongoose-examples/stm32-nucleo-f746z).
+  built with `#define MG` line commented out in `Core/main.c`
+- MIP: this repository
 
-(*) By default, Zephyr example is TLS-enabled. To compare sizes, a TLS-disabled
-build was done by disabling TLS in `prj.conf` and `CMakeLists.txt`

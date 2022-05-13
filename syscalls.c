@@ -61,3 +61,23 @@ int _read(int fd, char *ptr, int len) {
   (void) fd, (void) ptr, (void) len;
   return -1;
 }
+
+int _link(const char *a, const char *b) {
+  (void) a, (void) b;
+  return -1;
+}
+
+int _unlink(const char *a) {
+  (void) a;
+  return -1;
+}
+
+int _stat(const char *path, struct stat *st) {
+  (void) path, (void) st;
+  return -1;
+}
+
+int mkdir(const char *path, mode_t mode) {
+  (void) path, (void) mode;
+  return -1;
+}

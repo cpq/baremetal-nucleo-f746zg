@@ -69,7 +69,13 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
       }
       mg_http_printf_chunk(c, "");  // Don't forget the last empty chunk
     } else {
-      mg_http_reply(c, 200, "", "Got: %.*s\n", (int) hm->uri.len, hm->uri.ptr);
+      mg_http_reply(c, 200, "", "hi\n");
+#if 0
+      struct mg_http_serve_opts opts = {0};
+      opts.root_dir = "/web_root";
+      opts.fs = &mg_fs_packed;
+      mg_http_serve_dir(c, hm, &opts);
+#endif
     }
   }
   (void) fn_data;
@@ -122,10 +128,10 @@ int main(void) {
 
   struct mg_mgr mgr;  // Initialise Mongoose event manager
   mg_mgr_init(&mgr);  // and attach it to the MIP interface
+  mg_log_set("3");
   mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mgr);
   mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
   mg_http_listen(&mgr, "http://0.0.0.0:80", fn, NULL);
-  mg_log_set("2");
 
   // Initialise Mongoose network stack
   // Specify MAC address, and use 0 for IP, mask, GW - i.e. use DHCP
@@ -137,9 +143,14 @@ int main(void) {
                                     .rxcb = mip_driver_stm32_setrx,
                                     .status = mip_driver_stm32_status};
   mip_init(&mgr, &ipcfg, &stm32_driver);
-
   MG_INFO(("Init done, starting main loop"));
+
+#if defined(DASH)
+  extern void run_web_server(struct mg_mgr *);
+  run_web_server(&mgr);
+#else
   for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop
+#endif
 
   return 0;
 }

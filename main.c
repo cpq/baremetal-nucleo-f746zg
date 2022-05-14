@@ -128,7 +128,7 @@ int main(void) {
 
   struct mg_mgr mgr;  // Initialise Mongoose event manager
   mg_mgr_init(&mgr);  // and attach it to the MIP interface
-  mg_log_set("3");
+  mg_log_set("2");
   mg_timer_add(&mgr, 1000, MG_TIMER_REPEAT, blink_cb, &mgr);
   mg_timer_add(&mgr, 5000, MG_TIMER_REPEAT, sntp_cb, &mgr);
   mg_http_listen(&mgr, "http://0.0.0.0:80", fn, NULL);

@@ -25,7 +25,7 @@ $(TARGET).elf: $(SOURCES) mcu.h
 
 dash: $(TARGET).elf
 dash: DEFS += -DDASH -DMG_ENABLE_PACKED_FS=1
-dash: SOURCES += mongoose/examples/complete/packed_fs.c mongoose/examples/complete/web.c
+dash: SOURCES += mongoose/examples/device-dashboard/packed_fs.c mongoose/examples/device-dashboard/web.c
 
 su: CFLAGS += -fstack-usage
 su: $(TARGET).elf

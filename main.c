@@ -146,11 +146,10 @@ int main(void) {
   MG_INFO(("Init done, starting main loop"));
 
 #if defined(DASH)
-  extern void run_web_server(struct mg_mgr *);
-  run_web_server(&mgr);
-#else
-  for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop
+  extern void device_dashboard_fn(struct mg_connection *, int, void *, void *);
+  mg_http_listen(&mgr, "http://0.0.0.0:8000", device_dashboard_fn, &mgr);
 #endif
+  for (;;) mg_mgr_poll(&mgr, 0);  // Infinite event loop
 
   return 0;
 }

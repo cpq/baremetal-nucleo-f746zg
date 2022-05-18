@@ -2,11 +2,11 @@
 
 - No dependencies: no HAL, no CMSIS, no RTOS
 - Hand-written [mcu.h](mcu.h) header based on a [datasheet](https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
-- Interrupt-driven ethernet driver and systick
+- Interrupt-driven ethernet driver
 - Integrated [mongoose](https://github.com/cesanta/mongoose) and
   [mip](https://github.com/cesanta/mip) that implement
-  HTTP server, HTTP server, and SNTP time synchronisation
-- SysTick interrupt-driven software timer, blue LED blink
+  HTTP server and SNTP time synchronisation
+- SysTick interrupt-driven software timer with blue LED blinky
 - EXTI interrupt-driven user button handler, turns off/on green LED
 - Catch-all fault handler that blinks red LED
 
@@ -30,12 +30,6 @@ To see debug log, use any serial monitor program like `cu`:
 
 ```sh
 cu -l /dev/ttyACM0 -s 115200
-```
-
-The `mon` target uses `cat` command for serial port monitoring:
-
-```
-make clean flash mon
 ```
 
 ## Benchmark

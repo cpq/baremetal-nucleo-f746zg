@@ -3,9 +3,8 @@
 - No dependencies: no HAL, no CMSIS, no RTOS
 - Hand-written [mcu.h](mcu.h) header based on a [datasheet](https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
 - Interrupt-driven ethernet driver
-- Integrated [mongoose](https://github.com/cesanta/mongoose) and
-  [mip](https://github.com/cesanta/mip) that implement
-  HTTP server and SNTP time synchronisation
+- Integrated [mongoose](https://github.com/cesanta/mongoose)
+  to implement HTTP server and SNTP time synchronisation
 - SysTick interrupt-driven software timer with blue LED blinky
 - EXTI interrupt-driven user button handler, turns off/on green LED
 - Catch-all fault handler that blinks red LED

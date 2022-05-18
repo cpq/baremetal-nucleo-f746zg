@@ -1,9 +1,9 @@
 // Copyright (c) 2022 Cesanta Software Limited
 // All rights reserved
 
-#include "drivers/mip_driver_stm32.h"
 #include "mcu.h"
-#include "mip.h"
+
+#include "drivers/mip_driver_stm32.h"
 #include "mongoose.h"
 
 #define LED1 PIN('B', 0)   // On-board LED pin (green)
@@ -38,7 +38,7 @@ static void sfn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 static void sntp_cb(void *param) {  // SNTP timer function. Sync up time
   struct mg_mgr *mgr = (struct mg_mgr *) param;
   if (s_sntp_conn == NULL) s_sntp_conn = mg_sntp_connect(mgr, NULL, sfn, NULL);
-  if (s_boot_timestamp < 9999) mg_sntp_send(s_sntp_conn, 0UL);
+  if (s_boot_timestamp < 9999) mg_sntp_request(s_sntp_conn);
 }
 
 static void blink_cb(void *arg) {  // Blink periodically

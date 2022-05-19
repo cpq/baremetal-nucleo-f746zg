@@ -1,4 +1,4 @@
-# Bare metal web server on NUCLEO-F746ZG board
+# Baremetal webserver on NUCLEO-F746ZG
 
 - No dependencies: no HAL, no CMSIS, no RTOS
 - Hand-written [mcu.h](mcu.h) header based on a [datasheet](https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
